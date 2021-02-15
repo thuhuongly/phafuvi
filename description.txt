@@ -1,0 +1,90 @@
+When installing a package on an operating system, several things must be done in a specific order to make the software available to the user, e.g. downloading the package file, extracting it in a temporary locaton, checking for file collisions with already installed packages, moving the files to their final location and optionally executing some post-install code on the system, like adding a user. On Gentoo Linux [1] these steps are Bash [2] code called "phase functions" [3] and since Gentoo Linux compiles software from source code, there are quite a few that you will not find on other OSes.
+ 
+Since compiling software takes a lot of time and modern processors offer multiple cores, anything that can help parallelize the workload is welcomed. On one hand, packages often use build systems that support parallellization (e.g. packages that use 'make' [4] or 'ninja' [5] ), which can speed up the compilation of a single package. On the other hand, the Gentoo Package manager also supports the installation of several packages in parallel, as long as these packages don't depend on each other at build-time.
+
+At first glance, however, the latter does not always seem to yield the expected increased throughput. The goal of this mini-project is to visualize the actions of the Gentoo package manager over time in an attempt to better understand why that is and to see how twiddling with the package manager options, like removing certain not-so-important locks, can improve the situation.
+
+To collect data, we used a nice feature of the package manager where it allows a user to have hooks run before and after each of the phase functions. More specifically, the following code
+
+	for i in pkg_pretend pkg_setup src_unpack src_prepare src_configure src_compile src_test src_install pkg_preinst pkg_postinst
+	do
+		eval "pre_$i()  { local SANDBOX_WRITE=${SANDBOX_WRITE}; addwrite /var/log/ebuild-timings.txt; echo \$(cat /proc/uptime | cut -d' ' -f1) \${PN}-\${PVR} $i BEGIN >> /var/log/ebuild-timings.txt ; }"
+		eval "post_$i() { local SANDBOX_WRITE=${SANDBOX_WRITE}; addwrite /var/log/ebuild-timings.txt; echo \$(cat /proc/uptime | cut -d' ' -f1) \${PN}-\${PVR} $i END >> /var/log/ebuild-timings.txt ; }"
+	done
+
+defines additonal pre_* and post_* functions which write timestamps to a log file. 
+
+The task is to write a program that takes such a file as input and produces a schematic on which it is immediately visible which phase function of which package was running when. 
+
+=================================================
+== Example ASCII art of a basic implementation == 
+=================================================
+
+          --------------------------- 
+Package 1 |   /          /   /      | 
+          --------------------------- 
+           ----------------
+Package 2  |    /    /    |  
+           ----------------  
+              ----------------       
+Package 3     |    /    /    |       
+              ----------------
+                              -------------------
+Package 4                     |   /   /        /|
+                              -------------------
+                                      -------------
+Package 5                             |   / /    /|
+                                      -------------
+                                      -------------------
+Package 6                             |   /   /        /|
+                                      -------------------
+
+In this example
+
+- Time is shown horizontally
+- Packages are shown vertically
+- The boxes represent the execution time in the context of a specific package
+- The / symbols cut the boxes into parts that represent the phase functions
+
+==================================================
+== ASCII art of more intelligent implementation ==
+==================================================
+
+If the number of pakages increases, the above visualization will quickly become inefficient: once package 1 is compiled, it will never re-appear again so the line it is on will be blank indefinitely. Similarly, it will take some time for package 1000 to start its first phase function, so there a lot of wasted space there, too.
+
+Therefore, it is more interesting to think of the lines as reusable "executers", even though that concept does not really exist in the package manager (or at least is not exposed to us and hence can not be read from the log file)
+
+           --------------------------- -------------
+Executor 1 |   /          /   /      | |   / /    /|
+           --------------------------- -------------
+            ----------------   -------------------
+Executor 2  |    /    /    |   |   /   /        /|
+            ----------------   -------------------
+              ----------------        -------------------
+Executor 3    |    /    /    |        |   /   /        /|
+              ----------------        -------------------
+
+
+==================
+== Some remarks ==
+==================
+
+- Make sure phase functions that run in the context of a single package all use the same executor, otherwise it will be very hard to interpret results.
+- Initially, ignore the lines in the log file that are about pkg_pretend
+- Some phase functions will not take a lot of time and will be almost invisible. That's OK. At least the package names should be clear somehow (directly on the graph or via lookup of an ID in a table)
+- Most phase functions will begin almost immediately when the previous one ends. This however cannot be assumed and will not always be the case. In particular, some time will pass between the end of pkg_preinst and the beginning of pkg_postinst. The ASCII art examples above unfortunately do not show that.
+- The visualisation needs to be vector based so that users can zoom in and out without loss of quality
+- Since the number of active executors is likely to be fairly limited (<50), the number of packages can be up to 3000 and the fact that scrolling on a computer screen is more easily done vertically, a rotated view (compared to the examples) is preferred
+- Programming language: Python and/or HTML/CSS/JavaScript (so it can be fully browser based if that is easier). A browser-based approach might have the additional advantage of supporting mouse-over actions to display more information.
+- Extra marks for graphs that are generated on-the-fly (i.e. boxes are drawn while reading an (still open) log file line-by-line)
+- Extra marks for sufficient modularity
+- Extra marks for adding the pkg_pretend phase, which is run for *all* packages in the beginning of the installation process. It is probably best to ignore that when it comes to "assigning" a package to an executor.
+- Please allow for a couple of additional requests when the visualisation shows interesting behavior that should be analyzed more closely.
+
+Bookmarks only for the interested reader:
+
+[1] https://www.gentoo.org/
+[2] https://www.gnu.org/software/bash/
+[3] https://devmanual.gentoo.org/ebuild-writing/functions/index.html
+[4] https://www.gnu.org/software/make/
+[5] https://ninja-build.org/

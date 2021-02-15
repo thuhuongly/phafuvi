@@ -64,24 +64,24 @@ def update_graph(option_slctd):
     return fig
 
 def set_color(phase_func):
-        if(phase_func == "pkg_pretend"):
-            return px.colors.qualitative.G10[0]
-        elif(phase_func == "pkg_setup"):
-            return px.colors.qualitative.G10[1]
-        elif(phase_func == "src_unpack"):
-            return px.colors.qualitative.G10[2]
-        elif(phase_func == "src_prepare"):
-            return px.colors.qualitative.G10[3]
-        elif(phase_func == "src_configure"):
-            return px.colors.qualitative.G10[4]
-        elif(phase_func == "src_compile"):
-            return px.colors.qualitative.G10[5]
-        elif(phase_func == "src_install"):
-            return px.colors.qualitative.G10[6]
-        elif(phase_func == "pkg_preinst"):
-            return px.colors.qualitative.G10[7]
-        elif(phase_func == "pkg_postinst"):
-            return px.colors.qualitative.G10[8]
+    if(phase_func == "pkg_pretend"):
+        return px.colors.qualitative.G10[0]
+    elif(phase_func == "pkg_setup"):
+        return px.colors.qualitative.G10[1]
+    elif(phase_func == "src_unpack"):
+        return px.colors.qualitative.G10[2]
+    elif(phase_func == "src_prepare"):
+        return px.colors.qualitative.G10[3]
+    elif(phase_func == "src_configure"):
+        return px.colors.qualitative.G10[4]
+    elif(phase_func == "src_compile"):
+        return px.colors.qualitative.G10[5]
+    elif(phase_func == "src_install"):
+        return px.colors.qualitative.G10[6]
+    elif(phase_func == "pkg_preinst"):
+        return px.colors.qualitative.G10[7]
+    elif(phase_func == "pkg_postinst"):
+        return px.colors.qualitative.G10[8]
 
 if __name__ == "__main__":
     app.run_server(debug=True)

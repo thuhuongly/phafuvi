@@ -17,6 +17,13 @@ defines additonal pre_* and post_* functions which write timestamps to a log fil
 
 The task is to write a program that takes such a file as input and produces a schematic on which it is immediately visible which phase function of which package was running when.
 
+Bookmarks only for the interested reader:
+[1] https://www.gentoo.org/
+[2] https://www.gnu.org/software/bash/
+[3] https://devmanual.gentoo.org/ebuild-writing/functions/index.html
+[4] https://www.gnu.org/software/make/
+[5] https://ninja-build.org/
+
 # Installation
 I recommend installing numpy and pandas, since you will most likely use them.
 
@@ -30,3 +37,6 @@ Then, just install Dash. Plotly comes with Dash
 If you'd like to control the version of Plotly installed, you can do for example:
 
     $ pip install plotly==4.9.0
+
+This code is run with Python version 3.8.7:
+    $ python phafuvi.py

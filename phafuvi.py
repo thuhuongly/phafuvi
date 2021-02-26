@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-
+import numpy as np
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -11,25 +11,14 @@ app = dash.Dash(__name__)
 
 # ---------- Import and clean data (importing csv into pandas)
 df = pd.read_csv("ebuild-timings.csv")
-df = df.pivot(index=['Package', 'Phase Function'], columns='Status', values='Timestamp').reset_index().sort_values(by=['BEGIN'])
+df = df.pivot(index=['Package', 'Phase Function'], columns='Status', values='Timestamp').reset_index().sort_values(by=['Package', 'BEGIN'])
 df.columns.name=None
 
 # ------------------------------------------------------------------------------
 # App layout
 app.layout = html.Div([
     html.H1("Actions of the Gentoo package manager over time", style={'text-align': 'center'}),
-
-    dcc.Dropdown(id="slct_executor",
-                 options=[
-                     {"label": "Executor 1", "value": 1},
-                     {"label": "Executor 2", "value": 2},
-                     {"label": "Executor 3", "value": 3},
-                     {"label": "Executor 4", "value": 4}],
-                 multi=False,
-                 value=1,
-                 style={'width': "40%"}
-                 ),
-
+    html.Div(id='dummy', children=[]),
     html.Div(id='output_container', children=[]),
     html.Br(),
 
@@ -40,7 +29,7 @@ app.layout = html.Div([
 # Connect the Plotly graphs with Dash Components
 @app.callback(
     Output("ebuild_timing", "figure"), 
-    [Input("slct_executor", "value")]
+    [Input('dummy', 'id')]
 )
 
 def update_graph(option_slctd):
@@ -49,39 +38,42 @@ def update_graph(option_slctd):
     dff = df.copy()
     fig = go.Figure()
     names = set()
-    for (start, end, package, function) in zip(dff["BEGIN"], dff["END"], dff["Package"], dff["Phase Function"]):
-        name = f"{function}"
-        if name in names:
-            show_legend=False
-        else:
-            show_legend=True
-            names.add(name)
-        fig.add_trace(go.Scatter(x=[package, package], y=[start, end],
-                    mode='lines+markers', name=name, legendgroup=name,
-                    marker=dict(size=9, color=set_color(name)),
-                    showlegend=show_legend))
-    fig.update_layout(xaxis_title="Package", yaxis_title="Timestamp")
+    begin = dff.loc[dff['Phase Function'] == 'pkg_setup', ['Package', 'BEGIN']].values
+    end = dff.loc[dff['Phase Function'] == 'pkg_postinst', ['Package','END']].values
+
+    timestamp = np.concatenate((begin, end), axis=1).tolist()
+    executors = arrange_executor(timestamp)
+    for i in range(0, len(executors)):
+        traces = []
+        for package in executors[i]:
+            name = f"Executor {i + 1}"
+            trace = go.Scatter(x=[name, name], y=[package[1], package[-1]],
+                mode='lines+markers', name=package[0], legendgroup=package[0])
+            fig.add_trace(trace)
+
+    fig.update_layout(xaxis_title="Executor", yaxis_title="Timestamp")
+
     return fig
 
-def set_color(phase_func):
-    if(phase_func == "pkg_pretend"):
-        return px.colors.qualitative.G10[0]
-    elif(phase_func == "pkg_setup"):
-        return px.colors.qualitative.G10[1]
-    elif(phase_func == "src_unpack"):
-        return px.colors.qualitative.G10[2]
-    elif(phase_func == "src_prepare"):
-        return px.colors.qualitative.G10[3]
-    elif(phase_func == "src_configure"):
-        return px.colors.qualitative.G10[4]
-    elif(phase_func == "src_compile"):
-        return px.colors.qualitative.G10[5]
-    elif(phase_func == "src_install"):
-        return px.colors.qualitative.G10[6]
-    elif(phase_func == "pkg_preinst"):
-        return px.colors.qualitative.G10[7]
-    elif(phase_func == "pkg_postinst"):
-        return px.colors.qualitative.G10[8]
+def arrange_executor(timestamp):
+    # sort by begin time of pkg_setup
+    sorted_timestamp = sorted(timestamp, key=lambda x: x[1])
+
+    first_executor = [sorted_timestamp[0]]
+    executors = [first_executor]
+
+    for i in range(1,len(sorted_timestamp)):
+        need_new = True
+        for exe in executors:
+            if sorted_timestamp[i] not in exe and exe[-1][-1] < sorted_timestamp[i][1]:
+                exe.append(sorted_timestamp[i])
+                need_new = False
+                break
+        if need_new == True:
+            execu = []
+            execu.append(sorted_timestamp[i])
+            executors.append(execu)
+    return executors
 
 if __name__ == "__main__":
     app.run_server(debug=True)

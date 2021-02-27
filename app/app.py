@@ -6,8 +6,11 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+import flask
 
-app = dash.Dash(__name__)
+server = flask.Flask(__name__)
+app = dash.Dash(__name__, server=server)
+app.config.suppress_callback_exceptions = True
 
 # ---------- Import and clean data (importing csv into pandas)
 df = pd.read_csv("ebuild-timings.csv")
@@ -76,4 +79,7 @@ def arrange_executor(timestamp):
     return executors
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    import os
+
+    debug = False if os.environ["DASH_DEBUG_MODE"] == "False" else True
+    app.run_server(host="0.0.0.0", port=8050, debug=debug)

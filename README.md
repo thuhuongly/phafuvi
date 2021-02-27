@@ -31,17 +31,36 @@ Bookmarks only for the interested reader:
 # Installation
 I recommend installing numpy and pandas, since you will most likely use them.
 
-    $ pip install numpy
+```$ pip install numpy
     $ pip install pandas
-    
+```
 Then, just install Dash. Plotly comes with Dash
 
-    $ pip install dash
+```$ pip install dash```
     
 If you'd like to control the version of Plotly installed, you can do for example:
 
-    $ pip install plotly==4.9.0
+ ```$ pip install plotly==4.9.0```
 
 This code is run with Python version 3.8.7:
 
-    $ python phafuvi.py
+```$ python app/app.py```
+
+## Build and run with Docker
+
+```sh
+docker build -t dash .
+
+docker run -p 8050:8050 \
+-v "$(pwd)"/app:/app \
+--rm dash
+```
+## Access the page
+
+Go to `http://localhost:8050` in browser.
+
+## Switch debug mode in Dockerfile
+
+```dockerfile
+ENV DASH_DEBUG_MODE True # False
+```
